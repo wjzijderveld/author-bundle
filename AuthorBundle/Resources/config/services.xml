@@ -1,0 +1,83 @@
+<?xml version="1.0" ?>
+<container xmlns="http://symfony.com/schema/dic/services"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
+
+    <parameters>
+        <parameter key="sculpin_posts.posts_authors_data_provider.class">Qandidate\AuthorBundle\MergedTaxonomyDataProvider</parameter>
+        <parameter key="sculpin_posts.posts_author_index_generator.class">Sculpin\Contrib\Taxonomy\ProxySourceTaxonomyIndexGenerator</parameter>
+
+        <parameter key="sculpin_authors.author.class">Qandidate\AuthorBundle\Author</parameter>
+        <parameter key="sculpin_authors.author_factory.class">Sculpin\Contrib\ProxySourceCollection\SimpleProxySourceItemFactory</parameter>
+        <parameter key="sculpin_authors.authors.class">Qandidate\AuthorBundle\Authors</parameter>
+        <parameter key="sculpin_authors.authors_path_filter.class">Sculpin\Core\Source\Filter\AntPathFilter</parameter>
+        <parameter key="sculpin_authors.authors_filter.class">Sculpin\Core\Source\Filter\ChainFilter</parameter>
+        <parameter key="sculpin_authors.authors_defaults_map.class">Sculpin\Core\Source\Map\DefaultDataMap</parameter>
+        <parameter key="sculpin_authors.authors_calculated_date_from_filename_map.class">Sculpin\Core\Source\Map\CalculatedDateFromFilenameMap</parameter>
+        <parameter key="sculpin_authors.authors_map.class">Sculpin\Core\Source\Map\ChainMap</parameter>
+        <parameter key="sculpin_authors.authors_data_provider.class">Sculpin\Contrib\ProxySourceCollection\ProxySourceCollectionDataProvider</parameter>
+    </parameters>
+
+    <services>
+        <service id="sculpin_authors.authors" class="%sculpin_authors.authors.class%" />
+
+        <!-- match sources based on configured paths -->
+        <service id="sculpin_authors.authors_path_filter" class="%sculpin_authors.authors_path_filter.class%">
+            <argument>%qandidate_author.paths%</argument>
+            <argument type="service" id="sculpin.matcher" />
+        </service>
+
+        <service id="sculpin_authors.authors_filter" class="%sculpin_authors.authors_filter.class%">
+            <argument type="collection">
+                <argument type="service" id="sculpin_authors.authors_path_filter" />
+            </argument>
+        </service>
+
+        <!-- map default permalink -->
+        <service id="sculpin_authors.authors_defaults_map" class="%sculpin_authors.authors_defaults_map.class%">
+            <argument type="collection">
+                <argument key="permalink">%qandidate_author.permalink%</argument>
+                <argument key="layout">%qandidate_author.layout%</argument>
+            </argument>
+            <tag name="sculpin_authors.authors_map" />
+        </service>
+
+        <service id="sculpin_authors.authors_map" alias="sculpin_authors.authors_defaults_map" />
+
+        <service id="sculpin_authors.author_factory" class="%sculpin_authors.author_factory.class%">
+            <argument>%sculpin_authors.author.class%</argument>
+        </service>
+
+        <service id="sculpin_authors.authors_data_provider" class="%sculpin_authors.authors_data_provider.class%">
+            <argument type="service" id="sculpin.formatter_manager" />
+            <argument>authors</argument>
+            <argument>author</argument>
+            <argument type="service" id="sculpin_authors.authors" />
+            <argument type="service" id="sculpin_authors.authors_filter" />
+            <argument type="service" id="sculpin_authors.authors_map" />
+            <argument type="service" id="sculpin_authors.author_factory" />
+            <tag name="sculpin.data_provider" alias="authors" />
+            <tag name="kernel.event_subscriber" />
+        </service>
+
+        <service id="sculpin_posts.posts_authors_data_provider" class="%sculpin_posts.posts_authors_data_provider.class%">
+            <argument type="service" id="sculpin.data_provider_manager" />
+            <argument>posts</argument>
+            <argument>authors</argument>
+            <argument type="service" id="sculpin_authors.authors_data_provider" />
+            <argument>nickname</argument>
+            <tag name="kernel.event_subscriber" />
+            <tag name="sculpin.data_provider" alias="posts_authors" />
+        </service>
+
+        <service id="sculpin_posts.posts_author_index_generator" class="%sculpin_posts.posts_author_index_generator.class%">
+            <argument type="service" id="sculpin.data_provider_manager" />
+            <argument>posts_authors</argument>
+            <argument>author</argument>
+            <argument>authorized_posts</argument>
+            <tag name="sculpin.generator" alias="posts_author_index" />
+        </service>
+
+    </services>
+
+</container>
